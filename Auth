@@ -1,0 +1,22 @@
+# A simple user authentication system for an e-commerce mobile app
+
+users = {}
+
+def register(username, password):
+    if username in users:
+        return "Username already exists."
+    else:
+        users[username] = password
+        return "User registered successfully."
+
+def login(username, password):
+    if username not in users:
+        return "Username does not exist."
+    elif users[username] == password:
+        return "Login successful."
+    else:
+        return "Password is incorrect."
+
+# Example usage:
+print(register("user1", "password123"))
+print(login("user1", "password123"))
