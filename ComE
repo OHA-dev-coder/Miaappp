@@ -1,0 +1,90 @@
+from flask import Flask, jsonify, request
+
+app = Flask(__name__)
+
+# Sample data for the store
+products = [
+    {'id': 1, 'name': 'Product 1', 'price': 10.99},
+    {'id': 2, 'name': 'Product 2', 'price': 5.49},
+    {'id': 3, 'name': 'Product 3', 'price': 20.99}
+]
+
+# Route to list all products
+@app.route('/products', methods=['GET'])
+def get_products():
+    return jsonify({'products': products})
+
+# Route to add a new product
+@app.route('/product', methods=['POST'])
+def add_product():
+    new_product = request.get_json()
+    products.append(new_product)
+    return jsonify(new_product), 201
+
+# Route to process a checkout
+@app.route('/checkout', methods=['POST'])
+def checkout():
+    order = request.get_json()
+    # Process order here (e.g., calculate total, deduct inventory)
+    # For simplicity, we'll just return the received order
+    return jsonify(order), 200
+
+if __name__ == '__main__':
+    app.run(debug=True)
+from flask import Flask, jsonify, request, abort
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///ecommerce.db'
+db = SQLAlchemy(app)
+
+# Models for User and Product
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True)
+    password_hash = db.Column(db.String(100))
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+class Product(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100))
+    price = db.Column(db.Float)
+
+# Route to register a new user
+@app.route('/register', methods=['POST'])
+def register():
+    data = request.get_json()
+    if not data or not data.get('username') or not data.get('password'):
+        abort(400)  # missing arguments
+    if User.query.filter_by(username=data['username']).first():
+        abort(400)  # existing user
+    user = User(username=data['username'])
+    user.set_password(data['password'])
+    db.session.add(user)
+    db.session.commit()
+    return jsonify({'username': user.username}), 201
+
+# Route to authenticate a user
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    if not data or not data.get('username') or not data.get('password'):
+        abort(400)  # missing arguments
+    user = User.query.filter_by(username=data['username']).first()
+    if not user or not user.check_password(data['password']):
+        abort(401)  # invalid credentials
+    return jsonify({'login': True}), 200
+
+# Initialize the database
+@app.before_first_request
+def create_tables():
+    db.create_all()
+
+if __name__ == '__main__':
+    app.run(debug=True)
